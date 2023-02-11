@@ -58,13 +58,24 @@ export class RelayServer {
     const start = Date.now();
     try {
       let response: request.Response;
-      const { host, path, method, port, protocol, timeout } = relayServerRequest;
+      const { host, path, port, protocol, timeout } = relayServerRequest;
+      let method = relayServerRequest.method;
+      for(const [key, value] of Object.entries({ host, path, method, port, protocol, timeout})) {
+        if(!value)
+          throw new Error(`Missing required property ${key} in relay request`);
+      }
       const url = `${protocol}://${host}:${port}${path}`;
+      // @ts-ignore
+      method = method.toUpperCase();
       if(relayServerRequest.method === 'GET') {
         response = await this._request(method, url)
           .timeout(timeout);
       } else {
         const { body, type } = relayServerRequest;
+        for(const [key, value] of Object.entries({ body, type })) {
+          if(!value)
+            throw new Error(`Missing required property ${key} in relay ${method} request`);
+        }
         response = await this._request(method, url)
           .type(type)
           .send(body)
