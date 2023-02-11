@@ -70,7 +70,7 @@ interface RelayServerResponse {
 }
 ```
 
-### Example Relay Request using [Superagent](https://www.npmjs.com/package/superagent) library
+### Example relay request using [Superagent](https://www.npmjs.com/package/superagent)
 ```ts
 import request from 'superagent';
 
