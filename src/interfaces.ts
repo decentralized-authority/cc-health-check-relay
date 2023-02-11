@@ -1,10 +1,20 @@
-export interface RelayServerRequest {
-  address: string
+interface BaseRelayServerRequest {
   method: string
+  host: string
+  path: string
   port: number
   protocol: string
-  body: string
   timeout: number
+}
+
+export interface RelayServerGetRequest extends BaseRelayServerRequest {
+  method: 'GET'
+}
+
+export interface RelayServerPostRequest extends BaseRelayServerRequest {
+  method: 'POST'
+  body: string
+  type: string
 }
 
 export interface RelayServerError {

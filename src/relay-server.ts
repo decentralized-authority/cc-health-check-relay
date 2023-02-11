@@ -1,7 +1,8 @@
 import express from 'express';
 import bodyParser from 'body-parser';
 import request from 'superagent';
-import { RelayServerRequest, RelayServerResponse } from './interfaces';
+import { RelayServerError, RelayServerGetRequest, RelayServerPostRequest, RelayServerResponse } from './interfaces';
+import isPlainObject from 'lodash/isPlainObject';
 
 export class RelayServer {
 
@@ -28,7 +29,7 @@ export class RelayServer {
           .get(RelayServer.Routes.VERSION, (req, res) => {
             res.status(200)
             res.type('application/json');
-            res.send(JSON.stringify(this._version));
+            res.send(JSON.stringify(this.getVersion()));
           })
           .post(RelayServer.Routes.RELAY, async (req, res) => {
             res.status(200);
@@ -53,26 +54,38 @@ export class RelayServer {
     return this._version;
   }
 
-  async postRelayRequest(relayServerRequest: RelayServerRequest): Promise<RelayServerResponse> {
+  async postRelayRequest(relayServerRequest: RelayServerGetRequest|RelayServerPostRequest): Promise<RelayServerResponse> {
     const start = Date.now();
     try {
-      const { address, method, port, protocol, body, timeout } = relayServerRequest;
-      const response = await this._request(method, `${protocol}://${address}:${port}`)
-        .send(body)
-        .timeout(timeout);
+      let response: request.Response;
+      const { host, path, method, port, protocol, timeout } = relayServerRequest;
+      const url = `${protocol}://${host}:${port}${path}`;
+      if(relayServerRequest.method === 'GET') {
+        response = await this._request(method, url)
+          .timeout(timeout);
+      } else {
+        const { body, type } = relayServerRequest;
+        response = await this._request(method, url)
+          .type(type)
+          .send(body)
+          .timeout(timeout);
+      }
       const end = Date.now();
+      const result = isPlainObject(response.body) && Object.keys(response.body).length === 0 ? response.text : response.body;
       return {
         error: null,
-        result: response.body,
+        result,
         responseTime: end - start,
       };
     } catch(err: any) {
       const end = Date.now();
+      const errorObj: RelayServerError = {
+        message: err.message,
+      };
+      if(err.status)
+        errorObj.statusCode = err.status;
       return {
-        error: {
-          statusCode: err.status,
-          message: err.message,
-        },
+        error: errorObj,
         result: null,
         responseTime: end - start,
       };
